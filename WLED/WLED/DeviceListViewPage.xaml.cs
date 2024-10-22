@@ -171,6 +171,7 @@ namespace WLED
         internal void RefreshAll()
         {
             foreach (WLEDDevice d in deviceList) _ = d.Refresh();
+
         }
     }
 }

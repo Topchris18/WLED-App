@@ -18,6 +18,8 @@ namespace WLED
         private bool stateCurrent = false;                                      //Is the light currently on?
         private bool isEnabled = true;                                          //Disabled devices don't get polled or show up in the list
         private double brightnessReceived = 0.9, brightnessCurrent = 0.9;       //There are two vars for brightness to discern API responses from slider updates
+        private int batteryPercentageCurrent = 50;
+        private bool batteryEnabled = false;
 
         [XmlElement("url")]
         public string NetworkAddress
@@ -129,6 +131,56 @@ namespace WLED
             }
         }
 
+        [XmlIgnore]
+        public string BatteryPercentageCurrent { get { return batteryPercentageCurrent.ToString() + "%"; } } //batteryPercentage
+
+        [XmlIgnore]
+        public string BatteryLow
+        {
+            get
+            {
+                if (batteryEnabled == false) return "False";
+                if (batteryPercentageCurrent <=20)
+                {
+                    return "True";
+                }
+                else
+                {
+                    return "False";
+                };
+            }
+        } //batteryIcon
+        [XmlIgnore]
+        public string BatteryMedium { get
+            {
+                if (batteryEnabled == false) return "False";
+                if (batteryPercentageCurrent > 20 && batteryPercentageCurrent < 80)
+                {
+                    return "True";
+                }
+                else
+                {
+                    return "False";
+                };
+            } } //batteryIcon
+        [XmlIgnore]
+        public string BatteryHigh { get
+            {
+                if(batteryEnabled == false) return "False";
+                if (batteryPercentageCurrent >=80)
+                {
+                    return "True";
+                }
+                else
+                {
+                    return "False";
+                };
+            }
+        } //batteryIcon
+        [XmlIgnore]
+        public string BatteryEnabled { get { return batteryEnabled.ToString(); } }
+
+
         //constructors
         public WLEDDevice() { }
 
@@ -149,22 +201,23 @@ namespace WLED
             {
                 url = networkAddress;
             }
-
             string response = await DeviceHttpConnection.GetInstance().Send_WLED_API_Call(url, call);
-            if (response == null)
+            string responseJson = await DeviceHttpConnection.GetInstance().Send_WLED_API_Call_JSON_STATE(url);
+            if (response == null || responseJson == null)
             {
                 CurrentStatus = DeviceStatus.Unreachable;
                 return false;
             }
 
-            if (response.Equals("err")) //404 or other non-success http status codes, indicates that target is not a WLED device
+            if (response.Equals("err") || responseJson.Equals("err")) //404 or other non-success http status codes, indicates that target is not a WLED device
             {
                 CurrentStatus = DeviceStatus.Error;
                 return false;
             }
 
             XmlApiResponse deviceResponse = XmlApiResponseParser.ParseApiResponse(response);
-            if (deviceResponse == null) //could not parse XML API response
+            JsonApiResponse deviceResponseJson = JsonApiResponseParser.ParseApiResponse(responseJson);
+            if (deviceResponse == null || deviceResponseJson == null) //could not parse XML API response
             {
                 CurrentStatus = DeviceStatus.Error;
                 return false;
@@ -184,6 +237,26 @@ namespace WLED
 
             ColorCurrent = deviceResponse.LightColor;
             OnPropertyChanged("ColorCurrent");
+            try
+            {
+
+                batteryPercentageCurrent = Int32.Parse(deviceResponseJson.Usermods.BatteryLevel[0].ToString());
+                batteryEnabled = true;
+                OnPropertyChanged("BatteryPercentageCurrent");
+                OnPropertyChanged("BatteryHigh");
+                OnPropertyChanged("BatteryMedium");
+                OnPropertyChanged("BatteryLow");
+                OnPropertyChanged("BatteryEnabled");
+
+
+
+            }
+            catch (NullReferenceException)
+            {
+
+                batteryEnabled = false;
+                OnPropertyChanged("BatteryEnabled");
+            }
 
             StateCurrent = deviceResponse.IsOn;
             OnPropertyChanged("StateColor");

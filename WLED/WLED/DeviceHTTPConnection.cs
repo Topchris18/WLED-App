@@ -47,5 +47,27 @@ namespace WLED
                 return null; //time-out or other connection error
             }
         }
+
+        public async Task<string> Send_WLED_API_Call_JSON_STATE(string DeviceURI)
+        {
+            try
+            {
+                string apiCommand = "/json/info"; //WLED http API URI
+                var result = await Client.GetAsync(DeviceURI + apiCommand);
+                if (result.IsSuccessStatusCode)
+                {
+                    return await result.Content.ReadAsStringAsync();
+                }
+                else //404 or other non-success status codes, indicates that target is not WLED device
+                {  
+                    Console.WriteLine("Error Code:" + result.ToString());
+                    return "err";
+                }
+            }
+            catch
+            {
+                return null; //time-out or other connection error
+            }
+        }
     }
 }

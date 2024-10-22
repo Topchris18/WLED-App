@@ -12,5 +12,6 @@ namespace WLED
         public bool IsOn { get; set; } = false;
         public Color LightColor { get; set; }
         public string Name { get; set; } = "";
+        public String batteryPercentage { get; set; } = "40";
     }
 }
